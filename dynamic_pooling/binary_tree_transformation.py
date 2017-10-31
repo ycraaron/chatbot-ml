@@ -6,6 +6,7 @@ from nltk.draw.tree import draw_trees
 from timeit import default_timer as timer
 import re
 
+
 class BinaryTree(object):
 
     def __init__(self, nltk_tree):
@@ -64,8 +65,8 @@ def get_inner_nodes(nltk_tree):
     return nltk_tree
 
 
-def load_trees():
-    file = 'trees/wiki_09_tree_out.txt'
+def load_trees(tree_file='trees/wiki_09_tree_out.txt'):
+    file = tree_file
     with open(file, 'rb') as fid_tree:
         ls_trees = [l.decode('utf-8') for l in fid_tree.readlines()]
     return ls_trees
@@ -168,7 +169,7 @@ def tree_transformation(nltk_tree, parent, ls_pos_children=[], type=''):
     if type == 'single':
         print('single tree component')
         print(nltk_tree[parent])
-        nltk_tree[parent].append('@@')
+        nltk_tree[parent].append(ParentedTree(nltk_tree[parent].label(), ['@@']))
         # print(nltk_tree[parent])
     elif type == 'multiple':
         print('multiple tree component')
@@ -290,10 +291,16 @@ def single_tree_test(tree_str):
     msg = 'the fighting renegade the fighting renegade is a American western consititution'
     lisp_tree = tree_str
     # lisp_tree = get_stanford_tree(msg)
-    lisp_tree = '( 14 ( 14 ( 30 The ) ( 39 Fighting ) ( 39 Renegade ) ) ( 14 ( 30 The ) ( 39 Fighting ) ( 39 Renegade ) ) )'
+    lisp_tree = '(1 (1 (1 (1 (1 (14 (14 (40 Adults) @@) (16 (33 in) (14 (14 (30 the) (34 Olivella)) (40 species)))) (22 (22 (58 are) (8 (47 usually) @@)) (7 (47 quite) (34 small)))) (8 (47 hence) @@)) (1 (14 (30 the) (39 genus)) (22 (59 has) (14 (14 (14 (30 the) (34 common)) (39 name)) (2 (1 (14 (14 (39 dwarf) (40 olive.Species)) (16 (33 of) (14 (41 Oliva) @@))) (22 (22 (58 are) (8 (47 usually) @@)) (7 (35 larger) @@))) @@))))) (28 but)) (1 (14 (31 there) @@) (22 (58 are) (14 (40 exceptions) @@))))'
+    lisp_tree = '(1 (1 (14 (14 (14 (30 The) (41 United)) (42 States)) (20 (14 (14 (40 delegates) (14 @@)) (16 (33 in) (14 (41 Miss) (41 Earth)))) (16 (33 from) (16 @@)))) (: --)) (22 (55 were) (22 (57 selected) (16 (33 by) (14 (14 (14 (30 the) (41 Miss)) (14 (41 America) (41 International)) (39 pageant)) (2 (24 (63 where) (24 @@)) (1 (14 (30 the) (39 prize)) (22 (55 was) (1 (22 (52 to) (22 (22 (54 represent) (14 (14 (30 the) (41 United)) (42 States))) (16 (33 at) (14 (14 (30 the) (41 Miss)) (14 (41 Earth) (39 Pageant)))))) (1 @@))))))))))'
     # print(lisp_tree)
     nltk_tree_obj = ParentedTree.fromstring(lisp_tree)
-    draw_trees(nltk_tree_obj)
+    # draw_trees(nltk_tree_obj)
+    # for sub_tree in nltk_tree_obj.subtrees():
+    #     if sub_tree.label() == ':':
+    #         sub_tree.set_label('999')
+    # draw_trees(nltk_tree_obj)
+    # quit()
     ls_leaf_pos = get_leaf_position(nltk_tree_obj)
     print('leaves:', ls_leaf_pos)
     print(len(ls_leaf_pos))
@@ -311,6 +318,7 @@ def entry():
     # find_max_children()
     msg = 'xx may be concave or have deep furrows or have others'
     # msg = ''
+    ls_lisp_tree = load_trees('trees/train.txt')
     ls_lisp_tree = load_trees()
     print(len(ls_lisp_tree))
     ls_remove_index = []
@@ -335,27 +343,47 @@ def entry():
     fid_binary_out = open('trees/binary_tree_out.txt', 'wb')
     start = timer()
     i = 0
-    # print(ls_lisp_tree[224])
-    # single_tree_test(ls_lisp_tree[224])
-    # quit()
+    # print(ls_lisp_tree[0])
+    # single_tree_test(ls_lisp_tree[0])
     cnt_duplicate = 0
+    cnt_irregular = 0
     for lisp_tree in ls_lisp_tree:
+        is_irregular = False
         nltk_tree_obj = ParentedTree.fromstring(lisp_tree)
         ls_leaf_pos = get_leaf_position(nltk_tree_obj)
         dic_layer = generate_layer_dic(nltk_tree_obj, ls_leaf_pos)
         nltk_tree_obj = process_tree(nltk_tree_obj, dic_layer)
+        # draw_trees(nltk_tree_obj)
+        # draw_trees(nltk_tree_obj)
         if nltk_tree_obj is False:
             cnt_duplicate += 1
             continue
+        for sub_tree in nltk_tree_obj.subtrees():
+            if not re.findall(r'\b[0-9]+\b', sub_tree.label()):
+                cnt_irregular += 1
+                is_irregular = True
+                break
+        if is_irregular:
+            continue
+        nltk_tree_obj = nltk_tree_obj.pop()
         splitted = str(nltk_tree_obj).split()
         flat_tree = ' '.join(splitted)
         # print(flat_tree)
         fid_binary_out.write(flat_tree.encode('utf-8'))
         fid_binary_out.write('\n'.encode('utf-8'))
     print('duplication situation:', cnt_duplicate)
+    print('irregular situation:', cnt_irregular)
     end = timer()
     print(end-start)
     quit()
 
 
+def test():
+    tree_str = '(1 (1 (14 (14 (14 (30 The) (41 United)) (42 States)) (20 (14 (14 (40 delegates) (14 @@)) (16 (33 in) (14 (41 Miss) (41 Earth)))) (16 (33 from) (16 @@)))) (: --)) (22 (55 were) (22 (57 selected) (16 (33 by) (14 (14 (14 (30 the) (41 Miss)) (14 (41 America) (41 International)) (39 pageant)) (2 (24 (63 where) (24 @@)) (1 (14 (30 the) (39 prize)) (22 (55 was) (1 (22 (52 to) (22 (22 (54 represent) (14 (14 (30 the) (41 United)) (42 States))) (16 (33 at) (14 (14 (30 the) (41 Miss)) (14 (41 Earth) (39 Pageant)))))) (1 @@))))))))))'
+    nltk_tree = ParentedTree.fromstring(tree_str)
+    for sub in nltk_tree.subtrees():
+        if not re.findall(r'\b[0-9]+\b', sub.label()):
+            print(sub.label())
+
+# test()
 entry()
