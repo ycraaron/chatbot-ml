@@ -5,7 +5,7 @@ from nltk.tree import ParentedTree
 from nltk.draw.tree import draw_trees
 from timeit import default_timer as timer
 import re
-
+import sys
 
 class BinaryTree(object):
 
@@ -318,8 +318,9 @@ def entry():
     # find_max_children()
     msg = 'xx may be concave or have deep furrows or have others'
     # msg = ''
+    tree_file = sys.argv[1]
     ls_lisp_tree = load_trees('trees/train.txt')
-    ls_lisp_tree = load_trees()
+    ls_lisp_tree = load_trees(tree_file)
     print(len(ls_lisp_tree))
     ls_remove_index = []
 
