@@ -318,18 +318,23 @@ def entry():
     # find_max_children()
     msg = 'xx may be concave or have deep furrows or have others'
     # msg = ''
-    tree_file = sys.argv[1]
-    ls_lisp_tree = load_trees('trees/train.txt')
-    ls_lisp_tree = load_trees(tree_file)
+    # tree_file = sys.argv[1]
+    ls_lisp_tree = load_trees('trees/out_put_tree_corpus.txt')
+    # ls_lisp_tree = load_trees(tree_file)
     print(len(ls_lisp_tree))
     ls_remove_index = []
-
+    excep = 0
     for i in range(0, len(ls_lisp_tree)):
-        if find_max_children(ParentedTree.fromstring(ls_lisp_tree[i])):
+        try:
+            if find_max_children(ParentedTree.fromstring(ls_lisp_tree[i])):
+                ls_remove_index.append(i)
+        except Exception:
+            excep += 1
             ls_remove_index.append(i)
 
     ls_remove_index.sort()
     ls_remove_index.reverse()
+    print('number of exceps', excep)
     for index in ls_remove_index:
         del ls_lisp_tree[index]
 
