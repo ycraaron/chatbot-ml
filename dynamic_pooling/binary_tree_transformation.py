@@ -161,25 +161,25 @@ def find_layer_parent(layer, ls_layer):
 
         return ls_layer_parent, ls_layer_parent_multiple, ls_layer_parent_single
     else:
-        print('empty layer:', layer)
+        # print('empty layer:', layer)
         return [], [], []
 
 
 def tree_transformation(nltk_tree, parent, ls_pos_children=[], type=''):
     if type == 'single':
-        print('single tree component')
-        print(nltk_tree[parent])
+        # print('single tree component')
+        # print(nltk_tree[parent])
         nltk_tree[parent].append(ParentedTree(nltk_tree[parent].label(), ['@@']))
         # print(nltk_tree[parent])
     elif type == 'multiple':
-        print('multiple tree component')
+        # print('multiple tree component')
         tup_position_parent = parent['parent']
         tree_parent = nltk_tree[tup_position_parent]
         cnt_children = parent['max']
         cnt_sub_tree_pair = int((cnt_children + 1) / 2)
         remainder = (cnt_children + 1) % 2
-        print('num of tree pair:', cnt_sub_tree_pair)
-        print('all children position for multiple tree:', ls_pos_children)
+        # print('num of tree pair:', cnt_sub_tree_pair)
+        # print('all children position for multiple tree:', ls_pos_children)
         for i in range(0, cnt_sub_tree_pair):
             pos_tree1 = ls_pos_children[2*i]
             pos_tree2 = ls_pos_children[2*i+1]
@@ -205,17 +205,17 @@ def tree_transformation(nltk_tree, parent, ls_pos_children=[], type=''):
         if remainder != 0:
             pos_remaining_child = ls_pos_children[len(ls_pos_children) - 1]
             tree_remaining = nltk_tree[pos_remaining_child]
-            print('remaining tree', tree_remaining)
+            # print('remaining tree', tree_remaining)
             tree_parent.append(tree_remaining.copy(deep=True))
 
         for child in ls_pos_children:
-            print(nltk_tree[child], 'will be replaced')
+            # print(nltk_tree[child], 'will be replaced')
             nltk_tree[child] = ParentedTree('LEXICA_REPLACED', ['lexica_replaced_leaf'])
 
         # draw_trees(nltk_tree)
         # remove the replaced leaf
         leaves = nltk_tree.leaves()
-        print('new leaves', leaves)
+        # print('new leaves', leaves)
         for leaf in leaves:
             if leaf == 'lexica_replaced_leaf':
                 leaf_index = leaves.index(leaf)
@@ -228,23 +228,23 @@ def tree_transformation(nltk_tree, parent, ls_pos_children=[], type=''):
         # print(nltk_tree)
         # draw_trees(nltk_tree)
         # quit()
-        print(nltk_tree[tup_position_parent])
+        # print(nltk_tree[tup_position_parent])
 
     return nltk_tree
 
 
 def process_tree(nltk_tree, dic_layer):
     height = nltk_tree.height()
-    print('height', height)
+    # print('height', height)
     # loop through the tree from bottom up direction
     for i in range(0, height):
         layer_num = height-1-i
-        print('dealing with layer:', layer_num)
+        # print('dealing with layer:', layer_num)
         ls_layer = dic_layer[layer_num]
         # print(ls_layer)
         ls_parent_position, ls_parent_multiple_position, ls_parent_single_position = find_layer_parent(layer_num, ls_layer)
         if ls_parent_multiple_position:
-            print('target multiple parent found:', ls_parent_multiple_position)
+            # print('target multiple parent found:', ls_parent_multiple_position)
             ls_parent_content = [str(nltk_tree[parent_position['parent']]) for parent_position in ls_parent_multiple_position]
             set_parent_content = set(ls_parent_content)
             if len(ls_parent_content) != len(set_parent_content):
@@ -255,7 +255,7 @@ def process_tree(nltk_tree, dic_layer):
                 ls_children = []
                 tup_parent_position = parent_multiple['parent']
                 target_parent = nltk_tree[tup_parent_position]
-                print('ls_layer in each loop', ls_layer)
+                # print('ls_layer in each loop', ls_layer)
                 # if a same layer contains multiple targets, modified position should be removed before process next tree
                 ls_remove_layer_node_index = []
                 for j in range(0, len(ls_layer)):
@@ -268,7 +268,7 @@ def process_tree(nltk_tree, dic_layer):
                 ls_remove_layer_node_index.reverse()
                 for index in ls_remove_layer_node_index:
                     del ls_layer[index]
-                print('layer_remaining nodes:', ls_layer)
+                # print('layer_remaining nodes:', ls_layer)
                 # for pos_child in ls_layer:
                 #     obtained_parent = nltk_tree[pos_child].parent()
                 #     if target_parent == obtained_parent:
@@ -277,11 +277,12 @@ def process_tree(nltk_tree, dic_layer):
                 # draw_trees(nltk_tree)
                 nltk_tree = tree_transformation(nltk_tree=nltk_tree, parent=parent_multiple, ls_pos_children=ls_children, type='multiple')
         if ls_parent_single_position:
-            print('target single parent found:', ls_parent_single_position)
+            # print('target single parent found:', ls_parent_single_position)
             for parent_single in ls_parent_single_position:
                 nltk_tree = tree_transformation(nltk_tree=nltk_tree, parent=parent_single,  type='single')
         if ls_parent_position:
-            print('layer', layer_num, 'finished')
+            pass
+            # print('layer', layer_num, 'finished')
         else:
             continue
     return nltk_tree
@@ -319,8 +320,8 @@ def entry():
     msg = 'xx may be concave or have deep furrows or have others'
     # msg = ''
     # tree_file = sys.argv[1]
-    ls_lisp_tree = load_trees('trees/out_put_tree_corpus.txt')
-    # ls_lisp_tree = load_trees(tree_file)
+    ls_lisp_tree = load_trees('trees/wiki_09_tree_out.txt')
+    # ls_lisp_tree = load_trees(treep'r_file)
     print(len(ls_lisp_tree))
     ls_remove_index = []
     excep = 0
@@ -346,14 +347,20 @@ def entry():
     # lisp_tree = '(ROOT   (S     (NP (NN xx @@) @@)     (VP       (VP (VP (MD may @@)         (VP (VB be @@)           (ADJP (JJ concave @@) @@)))       (CC or @@))       (VP (VBP have @@)         (VP           (ADVP (JJ deep @@) @@)           (VBZ furrows @@))))))'
     # lisp_tree = '( 0 ( 1 ( 16 ( 33 Besides ) ( 14 ( 30 the ) ( 34 common ) ( 40 minerals ) ( 39 quartz ) ) )  ( 14 ( 14 ( 34 alkali ) ( 39 feldspar )  ( 39 plagioclase )  ( 39 biotite )  ( 39 muscovite ) ) ( 9 ( 47 as ) ( 47 well ) ( 33 as ) ) ( 14 ( 14 ( 39 calcite )  ( 39 dolomite ) ( 28 and ) ( 39 gypsum ) ) ( 14 ( 35 rarer ) ( 40 minerals ) ) ) ) ( 22 ( 58 occur )  ( 16 ( 33 for ) ( 14 ( 14 ( 39 example ) ( 39 actinolite ) )  ( 14 ( 39 allanite )  ( 39 andalusite )  ( 39 antigorite )  ( 39 apatite )  ( 39 arsenopyrite )  ( 39 baryte )  ( 39 cassiterite )  ( 39 chalcedony )  ( 39 chalcopyrite )  ( 39 chlorite )  ( 39 chromite )  ( 39 clinopyroxene )  ( 39 chrysotile )  ( 39 cordierite )  ( 39 cyanite )  ( 39 epidote )  ( 39 galena )  ( 39 garnet )  ( 39 goethite )  ( 39 graphite )  ( 39 hematite )  ( 39 hornblende )  ( 39 ilmenite )  ( 39 kaolinite )  ( 39 limonite )  ( 39 magnetite )  ( 39 manganite )  ( 39 marcasite )  ( 39 montmorillonite )  ( 39 prehnite )  ( 39 psilomelane )  ( 39 pyrite )  ( 39 pyrolusite )  ( 39 pyrrhotite )  ( 39 rutile )  ( 39 sillimanite )  ( 39 sphalerite )  ( 39 sphene )  ( 39 staurolite )  ( 39 tourmaline ) ( 28 and ) ( 39 zircon ) ) ) ) )  ) )'
     # lisp_tree = '(4 (3 (2 If) (3 (2 you) (3 (2 sometimes) (2 (2 like) (3 (2 to) (3 (3 (2 go) (2 (2 to) (2 (2 the) (2 movies)))) (3 (2 to) (3 (2 have) (4 fun))))))))) (2 (2 ,) (2 (2 Wasabi) (3 (3 (2 is) (2 (2 a) (2 (3 good) (2 (2 place) (2 (2 to) (2 start)))))) (2 .)))))'
-    fid_binary_out = open('trees/binary_tree_out.txt', 'wb')
+    fid_binary_out = open('trees/out_put_tree_corpus.txt', 'wb')
     start = timer()
-    i = 0
     # print(ls_lisp_tree[0])
     # single_tree_test(ls_lisp_tree[0])
     cnt_duplicate = 0
     cnt_irregular = 0
+    cnt_all = len(ls_lisp_tree)
+    ls_milestone = []
+    for i in range(1, 101):
+        ls_milestone.append(int(i/100 * cnt_all))
+    print(ls_milestone)
+    i = 0
     for lisp_tree in ls_lisp_tree:
+
         is_irregular = False
         nltk_tree_obj = ParentedTree.fromstring(lisp_tree)
         ls_leaf_pos = get_leaf_position(nltk_tree_obj)
@@ -377,6 +384,9 @@ def entry():
         # print(flat_tree)
         fid_binary_out.write(flat_tree.encode('utf-8'))
         fid_binary_out.write('\n'.encode('utf-8'))
+        i += 1
+        if i in ls_milestone:
+            print(round(i/cnt_all, 3) * 100, ' normal percent finished')
     print('duplication situation:', cnt_duplicate)
     print('irregular situation:', cnt_irregular)
     end = timer()
