@@ -3,6 +3,31 @@ from nltk.parse import stanford
 from nltk.tree import Tree
 from nltk.tree import ParentedTree
 from nltk.draw.tree import draw_trees
+import re
+
+class BinaryTree(object):
+
+    def __init__(self, nltk_tree):
+        self.nltk_tree = nltk_tree
+
+    def get_stanford_tree(self, msg):
+        raw_result = stanford_tree(msg)
+        lisp_tree = raw_result['sentences'][0]['parse']
+        return lisp_tree
+
+
+    # deprecated since there were some misunderstandings at the beginning
+    # use it only when you want to add a null leaf to every leaf parent to make them binary.
+    def add_leaves(self, nltk_tree):
+        ls_leaves = nltk_tree.leaves()
+        ls_leaf_indices = [ls_leaves.index(leaf) for leaf in ls_leaves]
+        for i in range(0, len(ls_leaf_indices)):
+            leaf_tree_location = nltk_tree.leaf_treeposition(ls_leaf_indices[i])
+            parent_position = leaf_tree_location[:-1]
+            nltk_tree[parent_position].append('@@')
+            for j in range(i, len(ls_leaf_indices)):
+                ls_leaf_indices[j] += 1
+        return nltk_tree
 
 
 def get_stanford_tree(msg):
@@ -11,21 +36,22 @@ def get_stanford_tree(msg):
     return lisp_tree
 
 
-def add_leaves(nltk_tree):
-    ls_leaves = nltk_tree.leaves()
-    ls_leaf_indices = [ls_leaves.index(leaf) for leaf in ls_leaves]
-    for i in range(0, len(ls_leaf_indices)):
-        leaf_tree_location = nltk_tree.leaf_treeposition(ls_leaf_indices[i])
-        parent_position = leaf_tree_location[:-1]
-        nltk_tree[parent_position].append('@@')
-        for j in range(i, len(ls_leaf_indices)):
-            ls_leaf_indices[j] += 1
-    return nltk_tree
-
-
+# get all the leaves
 def get_leaf_position(nltk_tree):
     ls_leaves = nltk_tree.leaves()
-    ls_leaf_indices = [ls_leaves.index(leaf) for leaf in ls_leaves]
+    # print(ls_leaves)
+    # ls_leaf_indices = [ls_leaves.index(leaf) for leaf in ls_leaves]
+    ls_leaf_indices = []
+    for leaf in ls_leaves:
+        index = ls_leaves.index(leaf)
+        if index in ls_leaf_indices:
+            for i in range(index, len(ls_leaves)):
+                if ls_leaves[i] == leaf and (i not in ls_leaf_indices):
+                    ls_leaf_indices.append(i)
+                    break
+        else:
+            ls_leaf_indices.append(index)
+    # print(ls_leaf_indices)
     ls_leaf_position = []
     for leaf in ls_leaf_indices:
         leaf_tree_location = nltk_tree.leaf_treeposition(leaf)
@@ -49,38 +75,46 @@ def build_nltk_tree(str_tree):
     return nltk_tree_obj
 
 
-def find_max_children():
+def find_max_children(nltk_tree):
     set_position = set()
     cnt_all = 0
     cnt_4 = 0
     cnt_10 = 0
-    for tree in load_trees():
-        nltk_tree = build_nltk_tree(tree)
-        tree_positions = nltk_tree.treepositions()
-        for position in tree_positions:
-            for index in position:
-                if index > 1:
-                    set_position.add(index)
-                # if index == 5:
-                #     print(tree)
-                #     quit()
-                if index in range(5, 11):
-                    cnt_4 += 1
-                if index > 10:
-                    cnt_10 += 1
-                if index > 40:
-                    print(tree)
-                    print(tree_positions)
-                if index < 5:
-                    cnt_all += 1
+    tree_positions = nltk_tree.treepositions()
+    for position in tree_positions:
+        for index in position:
+            if index > 4:
+                return True
 
-    print('total: ', cnt_all)
-    print('more than 4: ', cnt_4)
-    print('more than 10: ', cnt_10)
-    print(set_position)
-    print(max(set_position))
+    # for tree in load_trees():
+    #     nltk_tree = build_nltk_tree(tree)
+    #     tree_positions = nltk_tree.treepositions()
+    #     for position in tree_positions:
+    #         for index in position:
+    #             if index > 1:
+    #                 set_position.add(index)
+    #             # if index == 5:
+    #             #     print(tree)
+    #             #     quit()
+    #             if index in range(5, 11):
+    #                 cnt_4 += 1
+    #             if index > 10:
+    #                 cnt_10 += 1
+    #             if index > 40:
+    #                 print(tree)
+    #                 print(tree_positions)
+    #             if index < 5:
+    #                 cnt_all += 1
+    #
+    # print('total: ', cnt_all)
+    # print('more than 4: ', cnt_4)
+    # print('more than 10: ', cnt_10)
+    # print(set_position)
+    # print(max(set_position))
 
 
+# generate the layer information of a tree
+# pruning all the leaves
 def generate_layer_dic(nltk_tree, leaves):
     ls_tree_position = nltk_tree.treepositions()
     height = nltk_tree.height()
@@ -112,14 +146,15 @@ def find_layer_parent(layer, ls_layer):
             for child_node_position in ls_layer:
                 child_parent = child_node_position[:-1]
                 if parent == child_parent:
-                    child_num = child_node_position[len(child_node_position) - 1]
-                    if child_num > max_child_num:
-                        max_child_num = child_num
+                    # last element in tuple represents the num of children e.g: the parent of node (0, 2, 1, 3, 3) has at least 4 children
+                    cnt_child = child_node_position[len(child_node_position) - 1]
+                    if cnt_child > max_child_num:
+                        max_child_num = cnt_child
             if max_child_num == 0:
-                # print('target single parent found:', parent)
+                print('target single parent found:', parent)
                 ls_layer_parent_single.append(parent)
             if max_child_num > 1:
-                # print('target multiple parent found:', parent)
+                print('target multiple parent found:', parent)
                 ls_layer_parent_multiple.append({'parent': parent, 'max': max_child_num})
 
         return ls_layer_parent, ls_layer_parent_multiple, ls_layer_parent_single
@@ -141,7 +176,6 @@ def tree_transformation(nltk_tree, parent, ls_pos_children=[], type=''):
         cnt_children = parent['max']
         cnt_sub_tree_pair = int((cnt_children + 1) / 2)
         remainder = (cnt_children + 1) % 2
-
         print('num of tree pair:', cnt_sub_tree_pair)
         for i in range(0, cnt_sub_tree_pair):
             pos_tree1 = ls_pos_children[2*i]
@@ -160,14 +194,6 @@ def tree_transformation(nltk_tree, parent, ls_pos_children=[], type=''):
             str_tree1 = str(tree1)
             str_tree2 = str(tree2)
             tree_parent.append(ParentedTree(label_parent, [ParentedTree.fromstring(str_tree1), ParentedTree.fromstring(str_tree2)]))
-            # tree_parent[0].insert(0, ParentedTree.fromstring(str_tree1))
-            # new_sub_tree = tree_parent[0]
-            # print('new sub tree:', new_sub_tree)
-            # draw_trees(nltk_tree)
-            # tree_parent.insert(0, ParentedTree(label_parent, children=[tree1]))
-            # quit()
-            # tree_parent[0].append(tree1)
-            # tree_parent[0].append(tree2)
 
         print(ls_pos_children[:-1])
         print(ls_pos_children)
@@ -224,7 +250,6 @@ def process_tree(nltk_tree, dic_layer):
                     if target_parent == obtained_parent:
                         # print("found found found")
                         ls_children.append(pos_child)
-
                 nltk_tree = tree_transformation(nltk_tree=nltk_tree, parent=parent_multiple, ls_pos_children=ls_children, type='multiple')
         if ls_parent_single_position:
             print('target single parent found:', ls_parent_single_position)
@@ -237,21 +262,61 @@ def process_tree(nltk_tree, dic_layer):
     return nltk_tree
 
 
-# 1. find all leaves and add sibling node -> DONE
-# 2. find all inner nodes with more than 2 children -> DONE
-# 3. deal with those inner nodes
+# 1. find all leaves and add sibling node -> Deprecated
+# 2. find all inner nodes with single child or more than 2 children -> DONE
+# 3. deal with those inner nodes -> Done
 def entry():
     # find_max_children()
-    msg = 'xx may be concave or have deep furrows'
-    lisp_tree = get_stanford_tree(msg)
+    msg = 'xx may be concave or have deep furrows or have others'
+    # msg = ''
+    ls_lisp_tree = load_trees()
+    print(len(ls_lisp_tree))
+    ls_remove_index = []
+
+    for i in range(0, len(ls_lisp_tree)):
+        if find_max_children(ParentedTree.fromstring(ls_lisp_tree[i])):
+            ls_remove_index.append(i)
+
+    ls_remove_index.sort()
+    ls_remove_index.reverse()
+    for index in ls_remove_index:
+        del ls_lisp_tree[index]
+
+    print(len(ls_lisp_tree))
+    # quit()
+
+    # lisp_tree = get_stanford_tree(msg)
+    # print(lisp_tree)
     # lisp_tree = '(ROOT   (S     (NP (NN xx @@) @@)     (VP       (VP (VP (MD may @@)         (VP (VB be @@)           (ADJP (JJ concave @@) @@)))       (CC or @@))       (VP (VBP have @@)         (VP           (ADVP (JJ deep @@) @@)           (VBZ furrows @@))))))'
     # lisp_tree = '( 0 ( 1 ( 16 ( 33 Besides ) ( 14 ( 30 the ) ( 34 common ) ( 40 minerals ) ( 39 quartz ) ) )  ( 14 ( 14 ( 34 alkali ) ( 39 feldspar )  ( 39 plagioclase )  ( 39 biotite )  ( 39 muscovite ) ) ( 9 ( 47 as ) ( 47 well ) ( 33 as ) ) ( 14 ( 14 ( 39 calcite )  ( 39 dolomite ) ( 28 and ) ( 39 gypsum ) ) ( 14 ( 35 rarer ) ( 40 minerals ) ) ) ) ( 22 ( 58 occur )  ( 16 ( 33 for ) ( 14 ( 14 ( 39 example ) ( 39 actinolite ) )  ( 14 ( 39 allanite )  ( 39 andalusite )  ( 39 antigorite )  ( 39 apatite )  ( 39 arsenopyrite )  ( 39 baryte )  ( 39 cassiterite )  ( 39 chalcedony )  ( 39 chalcopyrite )  ( 39 chlorite )  ( 39 chromite )  ( 39 clinopyroxene )  ( 39 chrysotile )  ( 39 cordierite )  ( 39 cyanite )  ( 39 epidote )  ( 39 galena )  ( 39 garnet )  ( 39 goethite )  ( 39 graphite )  ( 39 hematite )  ( 39 hornblende )  ( 39 ilmenite )  ( 39 kaolinite )  ( 39 limonite )  ( 39 magnetite )  ( 39 manganite )  ( 39 marcasite )  ( 39 montmorillonite )  ( 39 prehnite )  ( 39 psilomelane )  ( 39 pyrite )  ( 39 pyrolusite )  ( 39 pyrrhotite )  ( 39 rutile )  ( 39 sillimanite )  ( 39 sphalerite )  ( 39 sphene )  ( 39 staurolite )  ( 39 tourmaline ) ( 28 and ) ( 39 zircon ) ) ) ) )  ) )'
+    # lisp_tree = '(4 (3 (2 If) (3 (2 you) (3 (2 sometimes) (2 (2 like) (3 (2 to) (3 (3 (2 go) (2 (2 to) (2 (2 the) (2 movies)))) (3 (2 to) (3 (2 have) (4 fun))))))))) (2 (2 ,) (2 (2 Wasabi) (3 (3 (2 is) (2 (2 a) (2 (3 good) (2 (2 place) (2 (2 to) (2 start)))))) (2 .)))))'
+
+    for lisp_tree in ls_lisp_tree:
+        nltk_tree_obj = ParentedTree.fromstring(lisp_tree)
+        ls_leaf_pos = get_leaf_position(nltk_tree_obj)
+        dic_layer = generate_layer_dic(nltk_tree_obj, ls_leaf_pos)
+        nltk_tree_obj = process_tree(nltk_tree_obj, dic_layer)
+        tree_str = str(nltk_tree_obj)
+        print(tree_str)
+        
+        quit()
+        
+    lisp_tree = ls_lisp_tree[0]
+    print(lisp_tree)
+
     nltk_tree_obj = ParentedTree.fromstring(lisp_tree)
+    # draw_trees(nltk_tree_obj)
 
     ls_leaf_pos = get_leaf_position(nltk_tree_obj)
+
     print('leaves:', ls_leaf_pos)
+    print(len(ls_leaf_pos))
+
     dic_layer = generate_layer_dic(nltk_tree_obj, ls_leaf_pos)
+    print(dic_layer)
+    # quit()
     nltk_tree_obj = process_tree(nltk_tree_obj, dic_layer)
+    print(nltk_tree_obj)
     draw_trees(nltk_tree_obj)
 
 entry()
