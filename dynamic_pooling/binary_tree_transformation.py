@@ -169,7 +169,7 @@ def tree_transformation(nltk_tree, parent, ls_pos_children=[], type=''):
         print('single tree component')
         print(nltk_tree[parent])
         nltk_tree[parent].append('@@')
-        print(nltk_tree[parent])
+        # print(nltk_tree[parent])
     elif type == 'multiple':
         print('multiple tree component')
         tup_position_parent = parent['parent']
@@ -178,14 +178,15 @@ def tree_transformation(nltk_tree, parent, ls_pos_children=[], type=''):
         cnt_sub_tree_pair = int((cnt_children + 1) / 2)
         remainder = (cnt_children + 1) % 2
         print('num of tree pair:', cnt_sub_tree_pair)
+        print('all children position for multiple tree:', ls_pos_children)
         for i in range(0, cnt_sub_tree_pair):
             pos_tree1 = ls_pos_children[2*i]
             pos_tree2 = ls_pos_children[2*i+1]
             tree1 = nltk_tree[pos_tree1]
             tree2 = nltk_tree[pos_tree2]
-            print('parent:', tree_parent)
-            print('tree 1:', tree1)
-            print('tree 2:', tree2)
+            # print('parent:', tree_parent)
+            # print('tree 1:', tree1)
+            # print('tree 2:', tree2)
             # draw_trees(tree1)
             # new_tree = ParentedTree()
             label_parent = tree_parent.label()
@@ -196,8 +197,8 @@ def tree_transformation(nltk_tree, parent, ls_pos_children=[], type=''):
             str_tree2 = str(tree2)
             tree_parent.append(ParentedTree(label_parent, [ParentedTree.fromstring(str_tree1), ParentedTree.fromstring(str_tree2)]))
 
-        print(ls_pos_children[:-1])
-        print(ls_pos_children)
+        # print(ls_pos_children[:-1])
+        # print(ls_pos_children)
         # draw_trees(nltk_tree)
         # quit()
         if remainder != 0:
@@ -224,7 +225,7 @@ def tree_transformation(nltk_tree, parent, ls_pos_children=[], type=''):
                 del nltk_tree[parent]
 
         # print(nltk_tree)
-        draw_trees(nltk_tree)
+        # draw_trees(nltk_tree)
         # quit()
         print(nltk_tree[tup_position_parent])
 
@@ -243,8 +244,12 @@ def process_tree(nltk_tree, dic_layer):
         ls_parent_position, ls_parent_multiple_position, ls_parent_single_position = find_layer_parent(layer_num, ls_layer)
         if ls_parent_multiple_position:
             print('target multiple parent found:', ls_parent_multiple_position)
+            ls_parent_content = [str(nltk_tree[parent_position['parent']]) for parent_position in ls_parent_multiple_position]
+            set_parent_content = set(ls_parent_content)
+            if len(ls_parent_content) != len(set_parent_content):
+                return False
             for parent_multiple in ls_parent_multiple_position:
-                print('current parent:', parent_multiple)
+                # print('current parent:', parent_multiple)
                 # for each parent, find its children
                 ls_children = []
                 tup_parent_position = parent_multiple['parent']
@@ -254,6 +259,7 @@ def process_tree(nltk_tree, dic_layer):
                 ls_remove_layer_node_index = []
                 for j in range(0, len(ls_layer)):
                     obtained_parent = nltk_tree[ls_layer[j]].parent()
+                    # print('obtained parent', obtained_parent, 'current parent', target_parent)
                     if target_parent == obtained_parent:
                         ls_children.append(ls_layer[j])
                         ls_remove_layer_node_index.append(j)
@@ -267,6 +273,7 @@ def process_tree(nltk_tree, dic_layer):
                 #     if target_parent == obtained_parent:
                 #         # print("found found found")
                 #         ls_children.append(pos_child)
+                # draw_trees(nltk_tree)
                 nltk_tree = tree_transformation(nltk_tree=nltk_tree, parent=parent_multiple, ls_pos_children=ls_children, type='multiple')
         if ls_parent_single_position:
             print('target single parent found:', ls_parent_single_position)
@@ -280,10 +287,13 @@ def process_tree(nltk_tree, dic_layer):
 
 
 def single_tree_test(tree_str):
+    msg = 'the fighting renegade the fighting renegade is a American western consititution'
     lisp_tree = tree_str
+    # lisp_tree = get_stanford_tree(msg)
+    lisp_tree = '( 14 ( 14 ( 30 The ) ( 39 Fighting ) ( 39 Renegade ) ) ( 14 ( 30 The ) ( 39 Fighting ) ( 39 Renegade ) ) )'
     # print(lisp_tree)
     nltk_tree_obj = ParentedTree.fromstring(lisp_tree)
-    # draw_trees(nltk_tree_obj)
+    draw_trees(nltk_tree_obj)
     ls_leaf_pos = get_leaf_position(nltk_tree_obj)
     print('leaves:', ls_leaf_pos)
     print(len(ls_leaf_pos))
@@ -325,19 +335,24 @@ def entry():
     fid_binary_out = open('trees/binary_tree_out.txt', 'wb')
     start = timer()
     i = 0
-    print(ls_lisp_tree[3])
-    single_tree_test(ls_lisp_tree[3])
-    quit()
+    # print(ls_lisp_tree[224])
+    # single_tree_test(ls_lisp_tree[224])
+    # quit()
+    cnt_duplicate = 0
     for lisp_tree in ls_lisp_tree:
         nltk_tree_obj = ParentedTree.fromstring(lisp_tree)
         ls_leaf_pos = get_leaf_position(nltk_tree_obj)
         dic_layer = generate_layer_dic(nltk_tree_obj, ls_leaf_pos)
         nltk_tree_obj = process_tree(nltk_tree_obj, dic_layer)
+        if nltk_tree_obj is False:
+            cnt_duplicate += 1
+            continue
         splitted = str(nltk_tree_obj).split()
         flat_tree = ' '.join(splitted)
-        print(flat_tree)
+        # print(flat_tree)
         fid_binary_out.write(flat_tree.encode('utf-8'))
         fid_binary_out.write('\n'.encode('utf-8'))
+    print('duplication situation:', cnt_duplicate)
     end = timer()
     print(end-start)
     quit()
