@@ -1,12 +1,21 @@
-from stanfordnlp.stanford_connector import stanford_tree
-from lexica_binary_tree import LexicaBinaryTree
-from nltk import word_tokenize
-from timeit import default_timer as timer
 import re
+from timeit import default_timer as timer
+
+from nltk import word_tokenize
+
+from binary_tree.lexica_binary_tree import LexicaBinaryTree
+from utils.stanfordnlp.stanford_connector import stanford_tree
 
 
-class MicrosoftData(object):
-    def __init__(self, file_input, file_output):
+class LexicaParaphrasedData(object):
+    def __init__(self, file_input, file_output, splitter, datasource):
+        """
+        :param file_input: input data file
+        :param file_output: path to ouput file
+        data_source = microsoft/quora for now
+        """
+        self.data_source = datasource
+        self.splitter = splitter
         self.fid_input = open(file_input, 'rb')
         self.fid_output = open(file_output, 'wb')
         self.ls_records = [line.decode('utf-8') for line in self.fid_input.readlines()]
@@ -24,13 +33,23 @@ class MicrosoftData(object):
 
     def process_data(self):
         """
-        process the input microsoft data
+        process the input paraphrased data
         """
         for record in self.ls_records:
             ls_split_record = self.split_record(record)
-            label = ls_split_record[0]
-            msg1 = self.clean_msg(ls_split_record[3])
-            msg2 = self.clean_msg(ls_split_record[4])
+
+            if self.data_source == 'microsoft':
+                if len(ls_split_record) != 5:
+                    continue
+                label = ls_split_record[0]
+                msg1 = self.clean_msg(ls_split_record[3])
+                msg2 = self.clean_msg(ls_split_record[4])
+            elif self.data_source == 'quora':
+                if len(ls_split_record) != 6:
+                    continue
+                label = ls_split_record[5].strip('\n')
+                msg1 = self.clean_msg(ls_split_record[3])
+                msg2 = self.clean_msg(ls_split_record[4])
 
             str_tree1 = self.parse_msg(msg1)
             str_tree2 = self.parse_msg(msg2)
@@ -70,7 +89,7 @@ class MicrosoftData(object):
         """
         remove the noise in the msg and replace the POS tag with number
         :param msg: input microsoft data sentence
-        :return:
+        :return: tree with replaced label
         """
         list_tree = self.generate_stanford_tree(msg).replace('\n', '')
         str_tree = re.sub(r"(\s\s)+", ' ', list_tree)
@@ -104,17 +123,14 @@ class MicrosoftData(object):
             return ''
         return lisp_tree
 
-    @staticmethod
-    def split_record(record):
-        return record.split('LEXICA_@@@^^^@@@') # splitter
+    def split_record(self, record):
+        """
+        :param record: the line in paraphrased data file
+        :return: a list for record splitted by the splitter
+        """
+        return record.split(self.splitter)
 
     @staticmethod
     def clean_msg(msg):
         msg = msg.strip()
         return msg
-
-start = timer()
-microsoft_data = MicrosoftData('microsoft_data/input_test.txt', 'microsoft_data/output_test.txt')
-microsoft_data.process_data()
-end = timer()
-print(end - start)
