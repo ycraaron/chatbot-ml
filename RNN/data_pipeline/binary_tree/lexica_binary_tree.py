@@ -6,8 +6,8 @@ from multiprocessing import Queue
 from nltk.draw.tree import draw_trees
 
 from nltk.tree import ParentedTree
-from data_pipeline.utils.stanfordnlp.stanford_connector import stanford_tree
 from data_pipeline.binary_tree.tree import Tree
+from data_pipeline.utils.stanfordnlp.stanford_nlp_utils import generate_clean_stanford_tree, replace_tree_label
 
 
 class LexicaBinaryTree(object):
@@ -40,9 +40,11 @@ class LexicaBinaryTree(object):
     # deprecated since there were some misunderstandings at the beginning
     # use it only when you want to add a null leaf to every leaf parent to make them binary.
     def debug_get_tree_obj_from_sentence(self, sentence):
-        self.str_tree = self.generate_stanford_tree(sentence)
+        self.str_tree = generate_clean_stanford_tree(sentence)
+        print self.str_tree
+        self.str_tree = '(ROOT (SBARQ (WHNP) (SQ (VP (NP (SBAR (WHADVP (WRB How)) (S (VP (TO to) (VP (VB move) (NP (NP (JJ pre)) (FRAG (S (VP (VBN installed) (NP (NNS apps)) (PP (TO to) (NP (NN SD) (NN card))))))))))))))))'
         if self.str_tree != 'BADTREE':
-            self.str_tree = self.replace_tree_label(self.str_tree)
+            self.str_tree = replace_tree_label(self.str_tree)
         if self.str_tree == 'BADTREE':
             self.bad_tree = True
             self.str_flat_binary_tree = 'BADTREE'
@@ -52,107 +54,12 @@ class LexicaBinaryTree(object):
         self.build_nltk_tree()
         return Tree(self.str_flat_binary_tree)
 
-    @staticmethod
-    def generate_stanford_tree(msg):
-        """
-        input a sentence, return a parsed stanford tree
-        :param msg: sentence
-        :return: lisp style stanford tree
-        """
-        raw_result = stanford_tree(msg)
-        # print(raw_result)
-        # tokens = raw_result['sentences'][0]['tokens']
-        # lisp_tree = raw_result['sentences'][0]['parse']
-        # lisp_tree = re.sub(r"(\s\s)+", ' ', lisp_tree)
-        # draw_trees(ParentedTree.fromstring(lisp_tree))
-        # # remove punc afterwards
-        # lisp_tree = re.sub(r'\([^\w\s] .\)', '', lisp_tree)
-        # draw_trees(ParentedTree.fromstring(lisp_tree))
-        # print(lisp_tree)
-        # nltk_tree = ParentedTree.fromstring(lisp_tree)
-        # sub_trees = nltk_tree.subtrees()
-        # leaves = nltk_tree.leaves()
-        # # print('new leaves', leaves)
-        #
-        # for leaf in leaves:
-        #     if re.findall(r'\([^\w\s] .\)', label):
-        #         leaf_index = leaves.index(leaf)
-        #         tree_position = self.nltk_tree.leaf_treeposition(leaf_index)
-        #         parent = tree_position[:-1]
-        #         del self.nltk_tree[parent]  # delete the merged subtrees
-        # for sub_tree in sub_trees:
-        #     label = sub_tree.label()
-        #     if re.findall(r'[A-Z]+', label):
-        #         continue
-        #     else:
-        #         del sub_tree
-        #         print(sub_tree)
-        #         print(label)
-        # print(tokens)
-        # quit()
-        try:
-            lisp_tree = raw_result['sentences'][0]['parse']
-            lisp_tree = re.sub(r"(\s\s)+", ' ', lisp_tree)
-            # draw_trees(ParentedTree.fromstring(lisp_tree))
-            # remove punc afterwards
-            lisp_tree = re.sub(r'\([^\(\w\s]+ [^\w\s\)]+\)', '', lisp_tree)
-            # draw_trees(ParentedTree.fromstring(lisp_tree))
-
-        except TypeError:
-            return 'BADTREE'
-        return lisp_tree
-
-    @staticmethod
-    def replace_tree_label(str_tree):
-        """
-        replace the POS tag with number
-        :param str_tree: flat lisp style tree
-        :return: str_tree after replace POS tag with number
-        """
-        dic_tag = {'ROOT': 0, 'S': 1, 'SBAR': 2, 'SBARQ': 3, 'SINV': 4, 'SQ': 5, 6: 'NP-TMP', 'ADJP': 7, 'ADVP': 8,
-                        'CONJP': 9,
-                        'FRAG': 10, 'INTJ': 11, 'LST': 12, 'NAC': 13, 'NP': 14, 'NX': 15, 'PP': 16, 'PRN': 17,
-                        'PRT': 18,
-                        "QP": 19, "RRC": 20, "UCP": 21, "VP": 22, "WHADJP": 23, "WHADVP": 24, "WHNP": 25, "WHPP": 26,
-                        "X": 27, 'CC': 28, 'CD': 29, 'DT': 30, 'EX': 31, 'FW': 32, 'IN': 33, 'JJ': 34, 'JJR': 35,
-                        'JJS': 36,
-                        'LS': 37, 'MD': 38, 'NN': 39, 'NNS': 40, 'NNP': 41, 'NNPS': 42, 'PDT': 43, 'POS': 44,
-                        'PRP$': 46, 'RB': 47, 'RBR': 48, 'RBS': 49, 'RP': 50, 'SYM': 51, 'TO': 52, 'UH': 53, 'VB': 54,
-                        'VBD': 55, 'VBG': 56, 'VBN': 57, 'VBP': 58, 'VBZ': 59, 'WDT': 60, 'WP': 61, 'WP$': 62,
-                        'WRB': 63,
-                        'ADV': 64, 'NOM': 65, 'DTV': 66, 'LGS': 67, 'PRD': 68, 'PUT': 69, 'SBJ': 70, 'TPC': 71,
-                        'VOC': 72,
-                        'BNF': 73, 'DIR': 74, 'EXT': 75, 'LOC': 76, 'MNR': 77, 'PRP': 78, 'TMP': 79, 'CLR': 80}
-
-        # tokens = word_tokenize(str_tree)
-        label_pattern = '\([A-Z]+'
-        ls_str_tree = str_tree.split(' ')
-        for i in range(0, len(ls_str_tree)):
-            token = ls_str_tree[i]
-            if re.findall(label_pattern, token, flags=re.IGNORECASE):
-                # print(token)
-                key = token[1:]
-                if key in dic_tag.keys():
-                    ls_str_tree[i] = '(' + str(dic_tag[token[1:]])
-                else:
-                    print('POS tag not found in dic:', key, 'is missing')
-                    return 'BADTREE'
-
-        # for t, i in enumerate(tokens):
-        #     if i in self.dic_tag.keys():
-        #         tokens[t] = str(self.dic_tag[i])  # Encode tags to dictionary index
-        new_str_tree = ' '.join(ls_str_tree)  # Forming string
-        # print(new_str_tree)
-        # print(str_tree)
-        # str_tree = re.sub(r"\(\s(.|,)\s(.|,)\s\)", "", str_tree)  # Remove punctuation parse glitch
-        return new_str_tree
-
     def bfs(self):
         """
         print the bfs result of the tree
         Returns: None
         """
-        print('BFSing the tree to check NONE type')
+        # print('BFSing the tree to check NONE type')
         tree_obj = Tree(self.str_flat_binary_tree)
         if tree_obj.root is None:
             return False
@@ -166,7 +73,7 @@ class LexicaBinaryTree(object):
             # node = queue.get()
             node = ls_queue[0]
             del ls_queue[0]
-            print(node.label, '->', node.word)
+            # print(node.label, '->', node.word)
             if node.left is not None:
                 ls_queue.append(node.left)
                 # queue.put_nowait(node.left)
@@ -176,6 +83,7 @@ class LexicaBinaryTree(object):
                     pass
                     # print('leaf detected')
                 else:
+                    print 'None type node finded, BADTREE', self.str_flat_binary_tree
                     self.str_flat_binary_tree = 'BADTREE'
                     self.bad_tree = True
                     return False
@@ -188,11 +96,11 @@ class LexicaBinaryTree(object):
                     pass
                     # print('leaf detected')
                 else:
+                    print 'None type node finded, BADTREE', self.str_flat_binary_tree
                     self.str_flat_binary_tree = 'BADTREE'
                     self.bad_tree = True
                     return False
         return True
-
 
     def add_leaves(self):
         ls_leaves = self.nltk_tree.leaves()
@@ -246,7 +154,8 @@ class LexicaBinaryTree(object):
     def build_nltk_tree(self):
         self.nltk_tree = ParentedTree.fromstring(self.str_tree).pop() # pop the root node generated by stanfordCoreNLP
         self.generate_flat_binary_tree()
-        self.bfs()
+        if not self.bad_tree:
+            self.bfs()
 
     def find_max_children(self):
         """
@@ -448,16 +357,18 @@ class LexicaBinaryTree(object):
         if self.nltk_tree is False:
             self.bad_tree = True
             self.str_flat_binary_tree = 'BADTREE'
+            return
 
         is_irregular = False    # tag for non numeric node label
         for sub_tree in self.nltk_tree.subtrees():
-            if not re.findall(r'\b[0-9]+\b', sub_tree.label()):
+            if not re.findall(r'\b[0-9]+\b', sub_tree.label(), flags=re.IGNORECASE):
                 is_irregular = True
                 print('irregular label detected, bad tree', self.str_tree)
                 break
         if is_irregular:
             self.bad_tree = True
             self.str_flat_binary_tree = 'BADTREE'
+            return
 
         splitted = str(self.nltk_tree).split()
         flat_tree = ' '.join(splitted)
